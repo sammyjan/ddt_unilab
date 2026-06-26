@@ -1,0 +1,48 @@
+# @package _global_
+training:
+  task_name: D1Flat
+  sim_backend: motrix
+algo:
+  num_envs: 4096
+  max_iterations: 40000
+  empirical_normalization: true
+  obs_groups:
+    actor:
+      - actor
+  policy:
+    init_noise_std: 0.5
+    actor_hidden_dims: [512, 256, 128]
+    critic_hidden_dims: [512, 256, 128]
+  algorithm:
+    learning_rate: 1.0e-3
+    entropy_coef: 1.0e-2
+    num_learning_epochs: 5
+    num_mini_batches: 4
+env:
+  commands:
+    vel_limit:
+      - [0.0, 0.0, -1.0]
+      - [1.0, 0.0, 1.0]
+  control_config:
+    action_scale: 0.25
+    hip_scale_reduction: 0.5
+    Kp: 40.0
+    Kd: 1.0
+    foot_Kp: 10.0
+    foot_Kd: 0.0
+reward:
+  scales:
+    tracking_lin_vel: 2.0
+    tracking_ang_vel: 1.0
+    lin_vel_z: -2.0
+    orientation: -1.0
+    upward: 0.5
+    base_height: -1.0
+    ang_vel_xy: -0.05
+    dof_acc: 0.0
+    torques: 0.0
+    action_rate: -0.01
+    similar_to_default: 0.0
+    collision: 0.0
+  tracking_sigma: 0.25
+  base_height_target: 0.45
