@@ -9,33 +9,34 @@
 ### 1.1 环境要求
 
 - Python >= 3.10
-- 已安装 `mujoco-uni==3.8.0`
-- 已安装 `rsl-rl-lib`、`hydra-core`、`gymnasium`、`torch`
+- 已安装 `uv`
+- 已安装 `mujoco-uni==3.8.0`、`rsl-rl-lib`、`hydra-core`、`gymnasium`、`torch`
 - 设置 `PYTHONPATH` 包含 `src` 目录
 
-示例：
+安装 `uv`：
 
 ```bash
-cd /path/to/UniLab
-export PYTHONPATH=src:$PYTHONPATH
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 ### 1.2 最小训练命令
 
 ```bash
-python scripts/train_rsl_rl.py task=d1_flat/mujoco
+uv run train --algo ppo --task d1_flat --sim mujoco
 ```
 
-- `task=d1_flat/mujoco`：选择任务名 + 仿真后端（`mujoco` 或 `motrix`）
-- Hydra 会自动从 `conf/ppo/task/d1_flat/mujoco.yaml` 加载配置
+- `--algo ppo`：选择算法（`ppo`、`appo`、`sac`、`td3`、`flashsac`、`mlx_ppo`）
+- `--task d1_flat`：选择任务名
+- `--sim mujoco`：选择仿真后端（`mujoco` 或 `motrix`）
+- CLI 会自动拼接为 `task=d1_flat/mujoco` 并从 `conf/ppo/task/d1_flat/mujoco.yaml` 加载配置
 
 ---
 
 ## 2. 任务与后端选择
 
-训练入口脚本：`scripts/train_rsl_rl.py`
+训练入口：`uv run train`
 
-任务通过 `task=<任务名>/<后端>` 指定，格式为 `task=<task>/<backend>`。
+格式：`uv run train --algo <算法> --task <任务> --sim <后端>`
 
 | 任务 | 后端配置示例 |
 |------|-------------|
@@ -43,9 +44,7 @@ python scripts/train_rsl_rl.py task=d1_flat/mujoco
 | D1 四轮（quadruped wheeled）平地 | `task=d1_flat/motrix` |
 | D1H 双轮足（bipedal wheeled）平地 | `task=d1h_flat/mujoco` |
 | D1H 双轮足（bipedal wheeled）平地 | `task=d1h_flat/motrix` |
-| Go1 平地 | `task=go1_joystick_flat/mujoco` |
-| Go2 平地 | `task=go2_joystick_flat/mujoco` |
-| G1 平地 | `task=g1_walk_flat/mujoco` |
+
 
 > 提示：若未指定 `task`，默认使用 `conf/ppo/config.yaml` 中的 `defaults`（通常为 `go1_joystick_flat/mujoco`）。
 
@@ -107,8 +106,7 @@ python scripts/train_rsl_rl.py task=d1_flat/mujoco
 ### 4.1 D1Flat 完整训练（MuJoCo 后端）
 
 ```bash
-python scripts/train_rsl_rl.py \
-  task=d1_flat/mujoco \
+uv run train --algo ppo --task d1_flat --sim mujoco \
   algo.num_envs=4096 \
   algo.max_iterations=40000 \
   algo.seed=1 \
@@ -118,8 +116,7 @@ python scripts/train_rsl_rl.py \
 ### 4.2 D1HFlat 完整训练（MuJoCo 后端）
 
 ```bash
-python scripts/train_rsl_rl.py \
-  task=d1h_flat/mujoco \
+uv run train --algo ppo --task d1h_flat --sim mujoco \
   algo.num_envs=4096 \
   algo.max_iterations=40000 \
   algo.seed=1
@@ -128,8 +125,7 @@ python scripts/train_rsl_rl.py \
 ### 4.3 快速 Smoke Test（调试用）
 
 ```bash
-python scripts/train_rsl_rl.py \
-  task=d1_flat/mujoco \
+uv run train --algo ppo --task d1_flat --sim mujoco \
   algo.max_iterations=10 \
   algo.num_envs=4
 ```
@@ -137,14 +133,13 @@ python scripts/train_rsl_rl.py \
 ### 4.4 切换后端（MotrixSim）
 
 ```bash
-python scripts/train_rsl_rl.py task=d1_flat/motrix
+uv run train --algo ppo --task d1_flat --sim motrix
 ```
 
 ### 4.5 修改奖励权重
 
 ```bash
-python scripts/train_rsl_rl.py \
-  task=d1_flat/mujoco \
+uv run train --algo ppo --task d1_flat --sim mujoco \
   reward.scales.tracking_lin_vel=3.0 \
   reward.scales.base_height=-2.0
 ```
@@ -152,8 +147,7 @@ python scripts/train_rsl_rl.py \
 ### 4.6 修改控制增益
 
 ```bash
-python scripts/train_rsl_rl.py \
-  task=d1h_flat/mujoco \
+uv run train --algo ppo --task d1h_flat --sim mujoco \
   env.control_config.Kp=50.0 \
   env.control_config.Kd=2.0
 ```
@@ -161,8 +155,7 @@ python scripts/train_rsl_rl.py \
 ### 4.7 从 Checkpoint 恢复训练
 
 ```bash
-python scripts/train_rsl_rl.py \
-  task=d1_flat/mujoco \
+uv run train --algo ppo --task d1_flat --sim mujoco \
   algo.resume=true \
   algo.load_run=2026-06-25_21-32-20_mujoco \
   algo.checkpoint=500
@@ -176,24 +169,16 @@ python scripts/train_rsl_rl.py \
 
 ### 5.1 自动 Play（训练结束后自动执行）
 
-默认行为：训练结束后会自动加载最新模型并渲染一段视频。可通过配置关闭：
-
-```bash
-python scripts/train_rsl_rl.py \
-  task=d1_flat/mujoco \
-  training.play_only=true \
-  training.play_render_mode=video
-```
+默认行为：训练结束后会自动加载最新模型并渲染一段视频。
 
 ### 5.2 仅 Play（不训练）
 
 ```bash
-python scripts/train_rsl_rl.py \
-  task=d1_flat/mujoco \
-  training.play_only=true \
-  algo.resume=true \
-  algo.load_run=<运行目录名>
+uv run eval --algo ppo --task d1_flat --sim mujoco --load-run -1
 ```
+
+- `--load-run -1`：加载最新一次训练的 checkpoint
+- 如需指定具体运行目录：`--load-run=2026-06-25_21-32-20_mujoco`
 
 ---
 
