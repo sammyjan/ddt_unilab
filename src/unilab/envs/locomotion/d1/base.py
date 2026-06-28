@@ -147,4 +147,5 @@ class D1BaseEnv(LocomotionBaseEnv):
         # clip to actuator ctrl range (used as torque limits)
         ctrl_range = np.asarray(backend.get_actuator_ctrl_range(), dtype=torque.dtype)
         np.clip(torque, ctrl_range[:, 0], ctrl_range[:, 1], out=torque)
+        self._last_motor_torque = torque.copy()
         return torque

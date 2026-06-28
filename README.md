@@ -1,21 +1,33 @@
-概述：本仓库在UniLab基础上加入本末科技D1系列机器人训练任务
+概述：本仓库在UniLab基础上加入本末科技D1系列机器人训练任务。UniLab支持多平台配置，如Linux CUDA, Linux ROCm, Linux XPU, and Apple Silicon / macOS，但本仓库目前只在Linux CUDA进行过验证，其他平台未知是否可用，感兴趣的开发者可自行尝试。
 
 ## 关于安装
-参考UniLab官方https://github.com/unilabsim/UniLab;
-https://unilabsim.github.io/UniLab-doc/en/1-getting_started/2-installation.html
+```bash
+conda create -n unilab python=3.13
+conda activate unilab
+pip install uv
+git clone https://github.com/sammyjan/ddt_unilab.git
+cd UniLab
+make setup
+```
+更多细节请参考UniLab官方https://github.com/unilabsim/UniLab 以及
+https://unilabsim.github.io/UniLab-doc/zh_CN/1-getting_started/2-installation.html
 
 ## 1. 快速开始
 
-### 最小训练命令
+### 最小训练命令：以D1为例
 
 ```bash
-uv run train --algo ppo --task d1_flat --sim mujoco
+uv run train --algo ppo --task d1_flat --sim motrix
 ```
 
-- `--algo ppo`：选择算法（`ppo`、`appo`、`sac`、`td3`、`flashsac`、`mlx_ppo`）
+- `--algo ppo`：选择算法（`ppo`、`appo`、`sac`、`td3`、`flashsac`、`mlx_ppo`）目前仅注册了PPO任务，用别的算法请注册新的任务
 - `--task d1_flat`：选择任务名
 - `--sim mujoco`：选择仿真后端（`mujoco` 或 `motrix`）
 - CLI 会自动拼接为 `task=d1_flat/mujoco` 并从 `conf/ppo/task/d1_flat/mujoco.yaml` 加载配置
+- 指定GPU，以英伟达显卡为例：
+`CUDA_VISIBLE_DEVICES=0 uv run train --algo ppo --task d1_flat --sim motrix`，其中CUDA_VISIBLE_DEVICES=0：用第 0 张卡
+- 训练时没有渲染画面，训练结束后会自动play，此时有渲染画面
+
 
 ---
 

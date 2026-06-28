@@ -37,6 +37,10 @@ class RewardConfig:
     scales: dict[str, float]
     tracking_sigma: float
     base_height_target: float
+    only_positive_rewards: bool = False
+    joint_pos_penalty_stand_still_scale: float = 5.0
+    joint_pos_penalty_velocity_threshold: float = 0.5
+    joint_pos_penalty_command_threshold: float = 0.1
 
 
 @dataclass
@@ -139,9 +143,18 @@ class D1FlatTask(D1BaseEnv):
         self._np_dtype = get_global_dtype()
         self._reward_cfg = cfg.reward_config
         self._enable_reward_log = True
+        self._last_dof_vel_for_acc = np.zeros((num_envs, NUM_D1_ACTIONS), dtype=get_global_dtype())
         self._init_reward_functions()
         self._init_domain_randomization(D1FlatDomainRandomizationProvider())
         self._backend.set_pre_step_control(self._pre_step_motor_control)
+
+    def reset(self, env_indices: np.ndarray) -> tuple[dict[str, np.ndarray], dict]:
+        env_ids = np.asarray(env_indices, dtype=np.int32)
+        obs, info = super().reset(env_ids)
+        dof_vel = self.get_dof_vel()
+        if dof_vel.shape[0] == self._num_envs:
+            self._last_dof_vel_for_acc[env_ids] = dof_vel[env_ids]
+        return obs, info
 
     @property
     def obs_groups_spec(self) -> dict[str, int]:
@@ -159,8 +172,13 @@ class D1FlatTask(D1BaseEnv):
             "orientation": rewards.orientation,
             "upward": rewards.upward,
             "similar_to_default": rewards.similar_to_default,
-            "dof_acc": self._reward_dof_acc,
-            "torques": self._reward_torques,
+            "dof_acc": rewards.dof_acc_l2,
+            "torques": rewards.dof_torques_l2,
+            "energy": rewards.energy,
+            "alive": rewards.alive,
+            "stand_still": self._reward_stand_still,
+            "joint_mirror": self._reward_joint_mirror,
+            "joint_pos_limits": rewards.joint_pos_limits,
             "collision": self._reward_collision,
         }
 
@@ -170,10 +188,19 @@ class D1FlatTask(D1BaseEnv):
         gravity = self._backend.get_sensor_data(self._cfg.sensor.gravity)
         dof_pos = self.get_dof_pos()
         dof_vel = self.get_dof_vel()
+        state.info["torques"] = getattr(self, "_last_motor_torque", np.zeros((self._num_envs, NUM_D1_ACTIONS), dtype=get_global_dtype()))
+        state.info["qacc"] = self._estimate_dof_acc(dof_vel)
         terminated = self._compute_terminated(gravity)
         reward = self._compute_reward(state.info, linvel, gyro, gravity, dof_pos, dof_vel)
         obs = self._compute_obs(state.info, linvel, gyro, gravity, dof_pos, dof_vel)
         return state.replace(obs=obs, reward=reward, terminated=terminated)
+
+    def _estimate_dof_acc(self, dof_vel: np.ndarray) -> np.ndarray:
+        if not hasattr(self, "_last_dof_vel_for_acc"):
+            self._last_dof_vel_for_acc = np.zeros((self._num_envs, NUM_D1_ACTIONS), dtype=get_global_dtype())
+        qacc = np.asarray((dof_vel - self._last_dof_vel_for_acc) / self._cfg.ctrl_dt, dtype=get_global_dtype())
+        self._last_dof_vel_for_acc[:] = dof_vel
+        return qacc
 
     def _compute_terminated(self, gravity: np.ndarray) -> np.ndarray:
         base_height = self._backend.get_base_pos()[:, 2]
@@ -226,6 +253,7 @@ class D1FlatTask(D1BaseEnv):
         dof_vel: np.ndarray,
     ) -> np.ndarray:
         cfg = self._reward_cfg
+        joint_range = self._backend.get_joint_range()
         ctx = RewardContext(
             info=info,
             linvel=linvel,
@@ -238,6 +266,7 @@ class D1FlatTask(D1BaseEnv):
             tracking_sigma=cfg.tracking_sigma,
             base_height_target=cfg.base_height_target,
             base_height=self._backend.get_base_pos()[:, 2],
+            joint_range=joint_range,
         )
         return rewards.run_reward_dispatch(
             scales=cfg.scales,
@@ -246,19 +275,21 @@ class D1FlatTask(D1BaseEnv):
             info=info,
             enable_log=self._enable_reward_log,
             ctrl_dt=self._cfg.ctrl_dt,
+            only_positive=cfg.only_positive_rewards,
         )
 
-    def _reward_dof_acc(self, ctx: RewardContext) -> np.ndarray:
-        # Penalize dof accelerations
-        if not hasattr(self, "_last_dof_vel"):
-            self._last_dof_vel = np.zeros((self._num_envs, NUM_D1_ACTIONS), dtype=get_global_dtype())
-        dof_acc = (ctx.info.get("dof_vel", self._last_dof_vel) - self._last_dof_vel) / self._cfg.ctrl_dt
-        self._last_dof_vel = ctx.info.get("dof_vel", self._last_dof_vel).copy()
-        return np.sum(np.square(dof_acc), axis=1)
+    def _reward_stand_still(self, ctx: RewardContext) -> np.ndarray:
+        commands = ctx.info["commands"]
+        stopped = np.linalg.norm(commands[:, :2], axis=1) < 0.1
+        dof_error = np.sum(np.abs(ctx.dof_pos - self.default_angles), axis=1)
+        return np.asarray(dof_error * stopped, dtype=get_global_dtype())
 
-    def _reward_torques(self, ctx: RewardContext) -> np.ndarray:
-        torques = ctx.info.get("torques", np.zeros((self._num_envs, NUM_D1_ACTIONS), dtype=get_global_dtype()))
-        return np.sum(np.square(torques), axis=1)
+    def _reward_joint_mirror(self, ctx: RewardContext) -> np.ndarray:
+        # FL(0:4) vs RR(12:16), FR(4:8) vs RL(8:12)
+        fl_rr = ctx.dof_pos[:, 0:4] - ctx.dof_pos[:, 12:16]
+        fr_rl = ctx.dof_pos[:, 4:8] - ctx.dof_pos[:, 8:12]
+        mirror = 0.5 * (np.sum(np.square(fl_rr), axis=1) + np.sum(np.square(fr_rl), axis=1))
+        return np.asarray(mirror, dtype=get_global_dtype())
 
     def _reward_collision(self, ctx: RewardContext) -> np.ndarray:
         # Placeholder: needs contact force sensors configured in MJCF
