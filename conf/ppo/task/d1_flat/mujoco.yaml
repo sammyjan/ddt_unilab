@@ -32,20 +32,18 @@ env:
     foot_Kd: 0.0
 reward:
   scales:
-    tracking_lin_vel: 1.5
-    tracking_ang_vel: 0.75
-    lin_vel_z: -5.0
-    orientation: -2.0
-    upward: 1.0
-    base_height: -10.0
-    ang_vel_xy: -0.1
+    tracking_lin_vel: 3.0
+    tracking_ang_vel: 1.5
+    lin_vel_z: -2.0
+    orientation: -1.0
+    upward: 0.5
+    base_height: -2.0
+    ang_vel_xy: -0.05
     dof_acc: -0.0001
     torques: -0.0002
     energy: -0.0002
-    action_rate: -0.005
-    similar_to_default: -0.5
-    alive: 0.5
-    stand_still: -0.5
+    action_rate: -0.01
+    similar_to_default_leg: -0.5
     joint_mirror: -0.1
     joint_pos_limits: -1.0
     collision: 0.0

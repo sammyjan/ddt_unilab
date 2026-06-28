@@ -23,6 +23,7 @@ from unilab.envs.locomotion.d1.base import (
     D1BaseEnv,
     D1_FOOT_INDICES,
     D1_HIP_INDICES,
+    D1_LEG_INDICES,
     NUM_D1_ACTIONS,
 )
 
@@ -171,12 +172,10 @@ class D1FlatTask(D1BaseEnv):
             "action_rate": rewards.action_rate,
             "orientation": rewards.orientation,
             "upward": rewards.upward,
-            "similar_to_default": rewards.similar_to_default,
+            "similar_to_default_leg": self._reward_similar_to_default_leg,
             "dof_acc": rewards.dof_acc_l2,
             "torques": rewards.dof_torques_l2,
             "energy": rewards.energy,
-            "alive": rewards.alive,
-            "stand_still": self._reward_stand_still,
             "joint_mirror": self._reward_joint_mirror,
             "joint_pos_limits": rewards.joint_pos_limits,
             "collision": self._reward_collision,
@@ -278,11 +277,11 @@ class D1FlatTask(D1BaseEnv):
             only_positive=cfg.only_positive_rewards,
         )
 
-    def _reward_stand_still(self, ctx: RewardContext) -> np.ndarray:
-        commands = ctx.info["commands"]
-        stopped = np.linalg.norm(commands[:, :2], axis=1) < 0.1
-        dof_error = np.sum(np.abs(ctx.dof_pos - self.default_angles), axis=1)
-        return np.asarray(dof_error * stopped, dtype=get_global_dtype())
+    def _reward_similar_to_default_leg(self, ctx: RewardContext) -> np.ndarray:
+        # Only penalize leg joints (hip/thigh/calf), allow foot (wheel) to rotate freely
+        leg_dof = ctx.dof_pos[:, D1_LEG_INDICES]
+        leg_default = self.default_angles[D1_LEG_INDICES]
+        return np.sum(np.square(leg_dof - leg_default), axis=1)
 
     def _reward_joint_mirror(self, ctx: RewardContext) -> np.ndarray:
         # FL(0:4) vs RR(12:16), FR(4:8) vs RL(8:12)
