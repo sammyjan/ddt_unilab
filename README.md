@@ -1,218 +1,247 @@
-<h1 align="center"> UniLab </h1>
+概述：本仓库在UniLab基础上加入本末科技D1系列机器人训练任务
 
-<h3 align="center">
-A Heterogeneous Architecture for Robot RL Beyond GPU-Dominant Paradigms
-</h3>
+## 关于安装
+参考UniLab官方https://github.com/unilabsim/UniLab、https://unilabsim.github.io/UniLab-doc/en/1-getting_started/2-installation.html
 
-<p align="center">Languages: English | <a href="README_zh.md">简体中文</a></p>
+## 1. 快速开始
 
-<p align="center">
-  <a href="https://unilabsim.github.io"><img src="https://img.shields.io/badge/project-page-brightgreen" alt="Project Page"></a>
-  <a href="https://arxiv.org/abs/2605.30313"><img src="https://img.shields.io/badge/arxiv-2605.30313-red" alt="arXiv"></a>
-  <a href="https://unilabsim.github.io/paper/"><img src="https://img.shields.io/badge/paper-UniLab-orange" alt="Paper"></a>
-  <a href="https://unilabsim.github.io/UniLab-doc/"><img src="https://img.shields.io/badge/docs-UniLab--doc-blue" alt="Documentation"></a>
-  <a href="https://unilabsim.github.io/paper/paper2gal.html"><img src="https://img.shields.io/badge/Galgame-play-ff69b4" alt="Galgame"></a>
-  <a href="https://discord.gg/EPCuguRmGX"><img src="https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0 License"></a>
-</p>
-
-<p align="center">
-  <img src="docs/sphinx/source/_static/assets/teaser.jpg" alt="UniLab Teaser" width="95%">
-</p>
-
-<p align="center"><em>Train robot RL without a GPU simulation backend. Teaser rendered with MotrixSim.</em></p>
-
-Start with the `Quick Demo` below to run the primary training command. The recommended setup uses `uv`; Conda and pip users should still follow the `uv` workflow for now. Platform-specific notes and current boundaries are in the [installation guide](https://unilabsim.github.io/UniLab-doc/en/1-getting_started/2-installation.html).
-
-## ✨ Highlights
-
-```
-┌───────────────────┐                            ┌─────────────────────────┐
-│  CPU Physics Sim  │   Unified Shared Memory    │   GPU Policy Training   │
-│   MuJoCo/Motrix   │ ─────────────────────────▶ │     PPO / SAC / TD3     │
-│ Multithread Step  │    SharedReplayBuffer      │ CUDA / MPS / ROCm / XPU │
-└───────────────────┘                            └─────────────────────────┘
-```
-
-- **Heterogeneous RL runtime:** CPU-parallel simulation streams transitions through shared memory while policy learning runs on GPU accelerators.
-- **Two physics backends:** MuJoCoUni and MotrixSim are integrated through backend-specific adapters and task owner configs.
-- **Unified training CLI:** `uv run train` and `uv run eval` cover PPO, MLX PPO, APPO, SAC, TD3, and FlashSAC; additional HORA and HIM-PPO paths are documented as script-level workflows.
-- **Config-owned tasks:** Hydra owner YAML files select task, reward, backend, and algorithm settings together; backend switching is expressed as `task=<task>/<backend>`.
-- **Cross-platform setup paths:** The repository tracks Linux CUDA, Linux ROCm, Linux XPU, and Apple Silicon / macOS setup flows.
-
-## 🚀 Quick Demo
-
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <img src="docs/sphinx/source/_static/demos/dance.jpg" alt="dance demo" width="100%">
-      <br>
-      <sub><b>dance</b><br>G1 motion tracking</sub>
-    </td>
-    <td align="center" width="33%">
-      <img src="docs/sphinx/source/_static/demos/wallflip.jpg" alt="wallflip demo" width="100%">
-      <br>
-      <sub><b>wallflip</b><br>G1 wall flip</sub>
-    </td>
-    <td align="center" width="33%">
-      <img src="docs/sphinx/source/_static/demos/teaser.jpg" alt="teaser demo" width="100%">
-      <br>
-      <sub><b>teaser</b><br>MotrixSim teaser</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <img src="docs/sphinx/source/_static/demos/boxtracking.jpg" alt="boxtracking demo" width="100%">
-      <br>
-      <sub><b>boxtracking</b><br>G1 box tracking</sub>
-    </td>
-    <td align="center" width="33%">
-      <img src="docs/sphinx/source/_static/demos/inhandgrasp.jpg" alt="inhandgrasp demo" width="100%">
-      <br>
-      <sub><b>inhandgrasp</b><br>Sharpa in-hand</sub>
-    </td>
-    <td align="center" width="33%">
-      <img src="docs/sphinx/source/_static/demos/locomani.jpg" alt="locomani demo" width="100%">
-      <br>
-      <sub><b>locomani</b><br>Go2 loco-manipulation</sub>
-    </td>
-  </tr>
-</table>
+### 最小训练命令
 
 ```bash
-# 0. Install uv if needed
-# Linux / macOS:
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows:
-# powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-# choco install make -y
-
-# 1. Clone the repository
-git clone https://github.com/unilabsim/UniLab.git
-cd UniLab
-
-# 2. Install dependencies
-# Pick the setup command for your platform.
-
-# Linux CUDA, macOS, or Windows
-make setup
-
-# Linux AMD / ROCm
-# make sync-rocm
-
-# Linux Intel Arc / iGPU
-# make sync-xpu
-
-# Without shell completion setup:
-# uv sync --extra mujoco --extra motrix
-# If `make` is not installed or unavailable:
-# uv sync --extra mujoco --extra motrix && uv run --no-sync unilab-complete install
-
-# 3. Pre-trained checkpoint playback (downloads from Hugging Face on first run)
-uv run demo dance
+uv run train --algo ppo --task d1_flat --sim mujoco
 ```
 
-Available demo names: `teaser`, `dance`, `wallflip`, `wallflip2`, `boxtracking`, `locomani`, `inhandgrasp`. See the [Unified CLI](https://unilabsim.github.io/UniLab-doc/en/2-user_guide/1-training/1-cli_reference.html) page for the full list and flags.
+- `--algo ppo`：选择算法（`ppo`、`appo`、`sac`、`td3`、`flashsac`、`mlx_ppo`）
+- `--task d1_flat`：选择任务名
+- `--sim mujoco`：选择仿真后端（`mujoco` 或 `motrix`）
+- CLI 会自动拼接为 `task=d1_flat/mujoco` 并从 `conf/ppo/task/d1_flat/mujoco.yaml` 加载配置
 
-> Mainland China users: motions, scenes, robot meshes, and demo checkpoints are pulled from Hugging Face on first run. If `huggingface.co` is unreachable, point the client at the community mirror before running demo commands:
->
-> ```bash
-> export HF_ENDPOINT=https://hf-mirror.com
-> ```
+---
 
-For training and evaluation:
+## 2. 任务与后端选择
+
+训练入口：`uv run train`
+
+格式：`uv run train --algo <算法> --task <任务> --sim <后端>`
+
+| 任务 | 后端配置示例 |
+|------|-------------|
+| D1 四轮（quadruped wheeled）平地 | `task=d1_flat/mujoco` |
+| D1 四轮（quadruped wheeled）平地 | `task=d1_flat/motrix` |
+| D1H 双轮足（bipedal wheeled）平地 | `task=d1h_flat/mujoco` |
+| D1H 双轮足（bipedal wheeled）平地 | `task=d1h_flat/motrix` |
+
+
+> 提示：若未指定 `task`，默认使用 `conf/ppo/config.yaml` 中的 `defaults`（通常为 `go1_joystick_flat/mujoco`）。
+
+---
+
+## 3. 常用命令行参数
+
+所有参数均通过 Hydra 覆盖，格式为 `key=value`。
+
+### 3.1 训练规模与迭代
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `algo.num_envs` | 并行环境数 | `algo.num_envs=4096` |
+| `algo.max_iterations` | 最大训练迭代次数 | `algo.max_iterations=10000` |
+| `training.num_timesteps` | 按总步数自动计算迭代数（优先级高于 max_iterations） | `training.num_timesteps=100000000` |
+| `algo.num_steps_per_env` | 每轮每个环境采集步数 | `algo.num_steps_per_env=24` |
+
+### 3.2 算法超参
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `algo.seed` | 随机种子 | `algo.seed=42` |
+| `algo.policy.init_noise_std` | 策略初始噪声标准差 | `algo.policy.init_noise_std=0.5` |
+| `algo.algorithm.learning_rate` | 学习率 | `algo.algorithm.learning_rate=1e-3` |
+| `algo.algorithm.entropy_coef` | 熵系数 | `algo.algorithm.entropy_coef=0.01` |
+| `algo.algorithm.gamma` | 折扣因子 | `algo.algorithm.gamma=0.99` |
+| `algo.algorithm.lam` | GAE lambda | `algo.algorithm.lam=0.95` |
+| `algo.algorithm.num_learning_epochs` | 每次数据复用训练轮数 | `algo.algorithm.num_learning_epochs=5` |
+| `algo.algorithm.num_mini_batches` | PPO mini-batch 数量 | `algo.algorithm.num_mini_batches=4` |
+
+### 3.3 环境与奖励
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `env.commands.vel_limit` | 指令速度范围 `[min_x, min_y, min_yaw]` / `[max_x, max_y, max_yaw]` | 数组格式，建议在 YAML 中修改 |
+| `env.control_config.Kp` | PD 控制比例增益 | `env.control_config.Kp=40.0` |
+| `env.control_config.Kd` | PD 控制微分增益 | `env.control_config.Kd=1.0` |
+| `env.control_config.action_scale` | 动作缩放系数 | `env.control_config.action_scale=0.25` |
+| `reward.scales.tracking_lin_vel` | 奖励权重：线速度跟踪 | `reward.scales.tracking_lin_vel=2.0` |
+| `reward.scales.base_height` | 奖励权重：高度惩罚 | `reward.scales.base_height=-1.0` |
+
+> 所有 `reward.scales.*` 都可在命令行直接覆盖。
+
+### 3.4 日志与恢复
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `algo.save_interval` | 模型保存间隔（按迭代数） | `algo.save_interval=100` |
+| `algo.resume` | 是否从最新 checkpoint 恢复 | `algo.resume=true` |
+| `algo.load_run` | 指定恢复的运行目录名 | `algo.load_run=2026-06-25_21-32-20_mujoco` |
+| `algo.checkpoint` | 指定恢复的模型编号 | `algo.checkpoint=100` |
+| `training.experiment_name` | 实验名称（用于日志目录） | `training.experiment_name=d1_exp` |
+
+---
+
+## 4. 典型训练命令示例
+
+### 4.1 D1Flat 完整训练（MuJoCo 后端）
 
 ```bash
-uv run train --algo appo --task go2_joystick_flat --sim motrix
-
-uv run eval --algo appo --task go2_joystick_flat --sim motrix --load-run -1
-
-# Headless Motrix video export for Linux/server runs
-uv run eval --algo appo --task go2_joystick_flat --sim motrix --load-run -1 --render-mode record
+uv run train --algo ppo --task d1_flat --sim mujoco \
+  algo.num_envs=4096 \
+  algo.max_iterations=40000 \
+  algo.seed=1 \
+  algo.save_interval=500
 ```
 
-This routes through the `go2_joystick_flat/motrix` task owner config and keeps backend selection explicit.
-
-On macOS / MacBook, the UniLab CLI routes Motrix interactive playback through `mxpython` when needed. Motrix defaults to interactive playback; use `--render-mode record` for headless video export or `--render-mode none` to skip playback. Detailed script-level commands are in the [Training Guide](https://unilabsim.github.io/UniLab-doc/en/2-user_guide/1-training/0-index.html).
-
-## 🏃 Example Runs
+### 4.2 D1HFlat 完整训练（MuJoCo 后端）
 
 ```bash
-uv run train --algo sac --task g1_walk_flat --sim mujoco
+uv run train --algo ppo --task d1h_flat --sim mujoco \
+  algo.num_envs=4096 \
+  algo.max_iterations=40000 \
+  algo.seed=1
 ```
+
+### 4.3 快速 Smoke Test（调试用）
 
 ```bash
-uv run train --algo sac --task g1_motion_tracking --sim motrix
+uv run train --algo ppo --task d1_flat --sim mujoco \
+  algo.max_iterations=10 \
+  algo.num_envs=4
 ```
+
+### 4.4 切换后端（MotrixSim）
 
 ```bash
-uv run train --algo appo --task sharpa_inhand --sim mujoco --profile hora
+uv run train --algo ppo --task d1_flat --sim motrix
 ```
 
-> Grasp caches auto-download from Hugging Face (`unilabsim/unilab-caches`) on first run into `src/unilab/assets/caches/`; no manual step is needed. To regenerate locally for custom scales (slow):
-> ```bash
-> bash scripts/sharpa_collect_grasps.sh 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5
-> ```
+### 4.5 修改奖励权重
 
 ```bash
-uv run train --algo ppo --task go2_arm_manip_loco --sim motrix
-uv run eval --algo ppo --task go2_arm_manip_loco --sim motrix --load-run -1
+uv run train --algo ppo --task d1_flat --sim mujoco \
+  reward.scales.tracking_lin_vel=3.0 \
+  reward.scales.base_height=-2.0
 ```
 
-Use `uv run train` for training, `uv run eval` for checkpoint playback, and `uv run demo` for the local demo preset. These commands keep algorithm, task, and backend selection explicit.
+### 4.6 修改控制增益
 
-More training commands, script-level entrypoints, algorithm matrix, resume flow, and W&B details are in the [Training Guide](https://unilabsim.github.io/UniLab-doc/en/2-user_guide/1-training/0-index.html).
-
-## 📚 Documentation
-
-Use the published [UniLab documentation](https://unilabsim.github.io/UniLab-doc/); start at the [English documentation index](https://unilabsim.github.io/UniLab-doc/en/0-index.html). High-signal entrypoints:
-
-- [Getting Started](https://unilabsim.github.io/UniLab-doc/en/1-getting_started/0-index.html): installation, Docker runtime, dependency setup, and first-run commands
-- [Training Guide](https://unilabsim.github.io/UniLab-doc/en/2-user_guide/1-training/0-index.html): training, playback, resume flow, Hydra overrides, and W&B
-- [Simulation Backends](https://unilabsim.github.io/UniLab-doc/en/2-user_guide/3-backends/0-index.html): generated MuJoCo / Motrix support matrix
-- [Development Standard](https://unilabsim.github.io/UniLab-doc/en/4-developer_guide/0-index.html): contracts, layering, and validation boundaries
-- [ADR Index](https://unilabsim.github.io/UniLab-doc/adr/ADR-0000-index.html): accepted architecture decisions
-
-## 💬 Community
-
-Join our [Discord server](https://discord.gg/EPCuguRmGX) to chat with the community and get help.
-
-<p align="center">
-  <img src="docs/sphinx/source/_static/assets/unilab-wechat-assistant.jpg" alt="UniLab WeChat assistant QR code" width="180">
-</p>
-
-<p align="center">Add the assistant on WeChat to join the group. Please include <code>UniLab community</code> in your request.</p>
-
-## 🧾 Citation
-
-### UniLab
-
-```bibtex
-@article{jia2026unilab,
-  title         = {UniLab: A Heterogeneous Architecture for Robot RL Beyond GPU-Dominant Paradigms},
-  author        = {Yufei Jia and Zhanxiang Cao and Mingrui Yu and Heng Zhang and Shenyu Chen and Dixuan Jiang and Meng Li and Xiaofan Li and Yiyang Liu and Junzhe Wu and Zheng Li and XiLin Fang and Tingyu Cui and Shengcheng Fu and Haoyang Li and Anqi Wang and Zifan Wang and Dongjie Zhu and Chenyu Cao and Zhenbiao Huang and Ziang Zheng and Jie Lu and Xin Ma and Zhengyang Wei and Xiang Zhao and Tianyue Zhan and Ye He and Yuxiang Chen and Yizhou Jiang and Yue Li and Haizhou Ge and Yuhang Dong and Fan Jia and Ziheng Zhang and Meng Zhang and Xiwa Deng and Zhixing Chen and Hanyang Shao and Chenxin Dong and Yixuan Li and Yizhi Chen and Bokui Chen and Kaifeng Zhang and Hanqing Cui and Yusen Qin and Ruqi Huang and Lei Han and Tiancai Wang and Xiang Li and Yue Gao and Guyue Zhou},
-  journal       = {arXiv preprint arXiv:2605.30313},
-  year          = {2026},
-  url           = {https://arxiv.org/abs/2605.30313}
-}
+```bash
+uv run train --algo ppo --task d1h_flat --sim mujoco \
+  env.control_config.Kp=50.0 \
+  env.control_config.Kd=2.0
 ```
 
-### Physics Backends
+### 4.7 从 Checkpoint 恢复训练
 
-```bibtex
-@article{jia2026mujocouni,
-  title  = {MuJoCoUni: Persistent Batched Runtime Primitives for MuJoCo},
-  author = {Jia, Yufei and Wu, Junzhe},
-  journal = {arXiv preprint arXiv:2605.24922},
-  year   = {2026}
-}
-
-@software{motrixsim2026,
-  title  = {MotrixSim: A Physics Simulation Engine for Robotics and Embodied AI},
-  author = {{Motphys Team}},
-  year   = {2026},
-  url    = {https://motrixsim.readthedocs.io/},
-  note   = {Python binary package}
-}
+```bash
+uv run train --algo ppo --task d1_flat --sim mujoco \
+  algo.resume=true \
+  algo.load_run=2026-06-25_21-32-20_mujoco \
+  algo.checkpoint=500
 ```
+
+---
+
+## 5. Play / 评估模式
+
+训练完成后，可加载最新模型进行策略回放与视频录制。
+
+### 5.1 自动 Play（训练结束后自动执行）
+
+默认行为：训练结束后会自动加载最新模型并渲染一段视频。
+
+### 5.2 仅 Play（不训练）
+
+```bash
+uv run eval --algo ppo --task d1_flat --sim mujoco --load-run -1
+```
+
+- `--load-run -1`：加载最新一次训练的 checkpoint
+- 如需指定具体运行目录：`--load-run=2026-06-25_21-32-20_mujoco`
+
+---
+
+## 6. 日志与输出目录
+
+训练日志和模型默认保存在：
+
+```
+logs/rsl_rl_ppo/<task_name>/<timestamp>_<backend>/
+```
+
+目录内容：
+
+| 文件 | 说明 |
+|------|------|
+| `model_<iter>.pt` | 策略 checkpoint |
+| `events.out.tfevents.*` | TensorBoard 日志 |
+| `config.yaml` / `config_tree.txt` | 完整配置记录 |
+| `play_video.mp4` | 训练结束后的策略回放视频（如渲染成功） |
+
+查看 TensorBoard：
+
+```bash
+tensorboard --logdir logs/rsl_rl_ppo
+```
+
+---
+
+## 7. 配置文件结构
+
+```
+conf/ppo/
+├── config.yaml              # 顶层默认配置
+├── algo/                    # 算法相关配置（如不同学习率策略）
+└── task/
+    ├── d1_flat/
+    │   ├── mujoco.yaml      # D1 + MuJoCo 后端
+    │   └── motrix.yaml      # D1 + MotrixSim 后端
+    ├── d1h_flat/
+    │   ├── mujoco.yaml      # D1H + MuJoCo 后端
+    │   └── motrix.yaml      # D1H + MotrixSim 后端
+    └── ...                  # 其他机器人任务
+```
+
+每个任务 YAML 覆盖以下内容：
+
+- `training.task_name`：环境注册名（如 `D1Flat`、`D1HFlat`）
+- `training.sim_backend`：`mujoco` 或 `motrix`
+- `algo.*`：网络结构、学习率、噪声等算法参数
+- `env.*`：控制参数、指令范围等环境配置
+- `reward.scales`：各奖励项权重
+
+---
+
+## 8. 常见问题
+
+### Q: 训练时报 `Environment 'D1Flat' is not registered`
+
+A: 确保 `src/unilab/envs/locomotion/__init__.py` 中已包含 `"unilab.envs.locomotion.d1"`，且 `d1/__init__.py` 正确导入了任务类。
+
+### Q: 如何调整观测噪声？
+
+A: 修改环境类中的 `NoiseConfig` 或 YAML 中对应的 `env.noise_config.*` 字段。
+
+### Q: 视频渲染报错 `unexpected keyword argument 'fps'`
+
+A: 这是 `imageio` 版本兼容问题，不影响模型训练。可忽略或通过安装兼容版本解决：
+
+```bash
+pip install imageio[ffmpeg]
+```
+
+---
+
+## 9. 附录：D1 / D1H 观测维度速查
+
+| 机器人 | Actor 输入维度 | Critic 输入维度 | 动作维度 |
+|--------|---------------|----------------|----------|
+| D1     | 57            | 60             | 16       |
+| D1H    | 33            | 36             | 8        |
