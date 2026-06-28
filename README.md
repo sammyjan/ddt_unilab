@@ -6,7 +6,7 @@ conda create -n unilab python=3.13
 conda activate unilab
 pip install uv
 git clone https://github.com/sammyjan/ddt_unilab.git
-cd UniLab
+cd ddt_unilab
 make setup
 ```
 更多细节请参考UniLab官方https://github.com/unilabsim/UniLab 以及
