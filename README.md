@@ -1,7 +1,8 @@
 概述：本仓库在UniLab基础上加入本末科技D1系列机器人训练任务
 
 ## 关于安装
-参考UniLab官方https://github.com/unilabsim/UniLab、https://unilabsim.github.io/UniLab-doc/en/1-getting_started/2-installation.html
+参考UniLab官方https://github.com/unilabsim/UniLab;
+https://unilabsim.github.io/UniLab-doc/en/1-getting_started/2-installation.html
 
 ## 1. 快速开始
 
