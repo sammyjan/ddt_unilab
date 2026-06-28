@@ -3,8 +3,8 @@ training:
   task_name: D1Flat
   sim_backend: mujoco
 algo:
-  num_envs: 4096
-  max_iterations: 40000
+  num_envs: 1024
+  max_iterations: 1000
   empirical_normalization: true
   obs_groups:
     actor:
