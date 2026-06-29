@@ -14,17 +14,18 @@ algo:
     actor_hidden_dims: [512, 256, 128]
     critic_hidden_dims: [512, 256, 128]
   algorithm:
-    learning_rate: 1.0e-3
-    entropy_coef: 1.0e-2
+    learning_rate: 3.0e-4
+    entropy_coef: 1.0e-3
     num_learning_epochs: 5
     num_mini_batches: 4
 env:
   commands:
     vel_limit:
-      - [0.0, 0.0, -1.0]
-      - [1.0, 0.0, 1.0]
+      - [-1.0, -0.5, -1.0]
+      - [1.0, 0.5, 1.0]
+    rel_standing_envs: 0.2
   control_config:
-    action_scale: 0.25
+    action_scale: 0.5
     hip_scale_reduction: 0.5
     Kp: 40.0
     Kd: 1.0
@@ -35,18 +36,19 @@ reward:
     tracking_lin_vel: 3.0
     tracking_ang_vel: 1.5
     lin_vel_z: -2.0
-    orientation: -1.0
-    upward: 0.5
-    base_height: -2.0
+    orientation: -2.0
+    upward: 1.0
+    base_height: -10.0
     ang_vel_xy: -0.05
     dof_acc: -0.0001
     torques: -0.0002
     energy: -0.0002
     action_rate: -0.01
-    similar_to_default_leg: -0.5
+    similar_to_default_leg: -0.0
     joint_mirror: -0.1
     joint_pos_limits: -1.0
     collision: 0.0
+    alive: 0.5
   tracking_sigma: 0.25
   base_height_target: 0.45
   only_positive_rewards: false

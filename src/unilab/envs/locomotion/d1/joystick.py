@@ -14,7 +14,7 @@ from unilab.base.scene import SceneCfg
 from unilab.dtype_config import get_global_dtype
 from unilab.envs.common.rotation import np_quat_mul, np_yaw_to_quat
 from unilab.envs.locomotion.common import rewards
-from unilab.envs.locomotion.common.commands import Commands
+from unilab.envs.locomotion.common.commands import Commands, zero_small_xy_commands
 from unilab.envs.locomotion.common.domain_rand import DomainRandConfig
 from unilab.envs.locomotion.common.dr_provider import LocomotionDRProvider
 from unilab.envs.locomotion.common.rewards import RewardContext
@@ -105,6 +105,15 @@ class D1FlatDomainRandomizationProvider(LocomotionDRProvider):
             randomization=None,
         )
 
+    def _sample_commands(self, env: Any, num_reset: int) -> np.ndarray:
+        commands = super()._sample_commands(env, num_reset)
+        zero_small_xy_commands(commands)
+        standing_prob = float(getattr(env.cfg.commands, "rel_standing_envs", 0.0))
+        if standing_prob > 0.0:
+            standing = np.random.uniform(size=(num_reset,)) < min(standing_prob, 1.0)
+            commands[standing] = 0.0
+        return commands
+
     def _compute_reset_obs(
         self,
         env: Any,
@@ -179,6 +188,10 @@ class D1FlatTask(D1BaseEnv):
             "joint_mirror": self._reward_joint_mirror,
             "joint_pos_limits": rewards.joint_pos_limits,
             "collision": self._reward_collision,
+            "alive": rewards.alive,
+            "stand_still": self._reward_stand_still,
+            "hip_pos": self._reward_hip_pos,
+            "joint_pos_penalty": self._reward_joint_pos_penalty,
         }
 
     def update_state(self, state: NpEnvState) -> NpEnvState:
@@ -293,3 +306,23 @@ class D1FlatTask(D1BaseEnv):
     def _reward_collision(self, ctx: RewardContext) -> np.ndarray:
         # Placeholder: needs contact force sensors configured in MJCF
         return np.zeros(self._num_envs, dtype=get_global_dtype())
+
+    def _reward_stand_still(self, ctx: RewardContext) -> np.ndarray:
+        commands = ctx.info["commands"]
+        stopped = np.linalg.norm(commands[:, :2], axis=1) < 0.1
+        leg_dof = ctx.dof_pos[:, D1_LEG_INDICES]
+        leg_default = self.default_angles[D1_LEG_INDICES]
+        dof_error = np.sum(np.abs(leg_dof - leg_default), axis=1)
+        return np.asarray(dof_error * stopped, dtype=get_global_dtype())
+
+    def _reward_hip_pos(self, ctx: RewardContext) -> np.ndarray:
+        diff = ctx.dof_pos[:, D1_HIP_INDICES] - self.default_angles[D1_HIP_INDICES]
+        return np.asarray(np.sum(np.square(diff), axis=1), dtype=get_global_dtype())
+
+    def _reward_joint_pos_penalty(self, ctx: RewardContext) -> np.ndarray:
+        return rewards.joint_pos_penalty(
+            ctx,
+            stand_still_scale=self._reward_cfg.joint_pos_penalty_stand_still_scale,
+            velocity_threshold=self._reward_cfg.joint_pos_penalty_velocity_threshold,
+            command_threshold=self._reward_cfg.joint_pos_penalty_command_threshold,
+        )
